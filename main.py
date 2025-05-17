@@ -204,7 +204,7 @@ def main(args):
     
     # Inference
     start_time = time.time()
-    ## Sampling thinking
+    ## Sample thinking
     finished_prompt_thinkings = [[] for _ in len(samples)]
     continued_prompt_thinkings = [[sample["prompt"]] for sample in samples]
     for step in range(args.num_diverged_steps):
@@ -237,7 +237,7 @@ def main(args):
         for i, step_finished_prompt_thinking in enumerate(step_finished_prompt_thinkings):
             finished_prompt_thinkings[i] += step_finished_prompt_thinking  
 
-    ## Sampling solution
+    ## Sample solution
     solution_sampling_params = SamplingParams(
         temperature=args.temperature,
         top_p=args.top_p,
