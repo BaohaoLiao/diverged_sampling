@@ -281,7 +281,7 @@ def main(args):
 def parse_args():
     parser = argparse.ArgumentParser()
     # Data
-    parser.add_argument("--data_dir", default="./data", type=str)
+    parser.add_argument("--data_dir", default="./datas", type=str)
     parser.add_argument("--data_name", default="aime24", type=str)
     parser.add_argument("--num_test_sample", default=-1, type=int)  # -1 for full data
 
