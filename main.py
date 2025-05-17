@@ -207,7 +207,7 @@ def main(args):
     ## Sampling thinking
     finished_prompt_thinkings = [[] for _ in len(samples)]
     continued_prompt_thinkings = [[sample["prompt"]] for sample in samples]
-    for step in args.num_diverged_steps:
+    for step in range(args.num_diverged_steps):
         if step == args.num_diverged_steps - 1:
             max_tokens = args.total_thinking_tokens - step * args.max_tokens_per_step
         else:
