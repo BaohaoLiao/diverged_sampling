@@ -176,6 +176,9 @@ def main(args):
     else:
         example = load_data(args.data_name, args.data_dir)
 
+    print("=" * 50)
+    print(f"{args.data_name} || #samples: {len(examples)}")
+
     # Load model
     available_gpus = os.environ["CUDA_VISIBLE_DEVICES"].split(",")
     llm = LLM(
@@ -192,7 +195,7 @@ def main(args):
 
     # Prepare data
     samples = []
-    for example in examples:
+    for i, example in enumerate(examples):
         question = parse_question(example, args.data_name)
         prompt = prepare_prompt(example["question"], tokenizer, args.data_name)
         samples.appennd({
@@ -201,6 +204,8 @@ def main(args):
             "answer": example["answer"],
             "prompt": prompt,
         })
+        if i == 0:
+            print(prompt)
     
     # Inference
     start_time = time.time()
