@@ -168,7 +168,7 @@ def main(args):
                   f"totalThinkingTokens{args.total_thinking_tokens}_stepTokens{args.max_tokens_per_step}"
     os.makedirs(f"{output_dir}/{args.data_name}", exist_ok=True)
 
-    # Load data
+    # Load and prepare data
     if "math500_level" in args.data_name:
         level = int(args.data_name.strip()[-1])
         examples = load_data("math500", args.data_dir)
@@ -178,6 +178,20 @@ def main(args):
 
     print("=" * 50)
     print(f"{args.data_name} || #samples: {len(examples)}")
+
+    tokenizer = transformers.AutoTokenizer.from_pretrained(args.model_name_or_path)
+    samples = []
+    for i, example in enumerate(examples):
+        question = parse_question(example, args.data_name)
+        prompt = prepare_prompt(example["question"], tokenizer, args.data_name)
+        samples.appennd({
+            "idx": example["idx"],
+            "question": question,
+            "answer": example["answer"],
+            "prompt": prompt,
+        })
+        if i == 0:
+            print(prompt)
 
     # Load model
     available_gpus = os.environ["CUDA_VISIBLE_DEVICES"].split(",")
@@ -191,21 +205,6 @@ def main(args):
         seed=args.seed,
         enable_prefix_caching=True,  # For efficiency
     )
-    tokenizer = transformers.AutoTokenizer.from_pretrained(args.model_name_or_path)
-
-    # Prepare data
-    samples = []
-    for i, example in enumerate(examples):
-        question = parse_question(example, args.data_name)
-        prompt = prepare_prompt(example["question"], tokenizer, args.data_name)
-        samples.appennd({
-            "idx": example["idx"],
-            "question": question,
-            "answer": example["answer"],
-            "prompt": prompt,
-        })
-        if i == 0:
-            print(prompt)
     
     # Inference
     start_time = time.time()
