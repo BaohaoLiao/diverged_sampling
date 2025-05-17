@@ -65,9 +65,11 @@ def single_step_generation(llm, sampling_params, prompts_per_question, final_ste
     finished_prompt_thinkings = [[] for _ in num_prompts_per_question]
     continued_prompt_thinkings = [[] for _ in num_prompts_per_question]
     global_idx = 0
+    num_gen_tokens = 0
     for i, num in enumerate(num_prompts_per_question):
         for j in range(num):
             for o in llm_outputs[global_idx].outputs:
+                num_gen_tokens += len(o.token_ids)
                 if final_step:
                     finished_prompt_thinkings[i].append(llm_outputs[global_idx].prompt + o.text)
                 else:
@@ -78,7 +80,7 @@ def single_step_generation(llm, sampling_params, prompts_per_question, final_ste
 
             global_idx += 1
 
-    return finished_prompt_thinkings, continued_prompt_thinkings
+    return finished_prompt_thinkings, continued_prompt_thinkings, num_gen_tokens
 
 
 def solution_generation(llm, sampling_params, prompts_per_question):
@@ -94,12 +96,14 @@ def solution_generation(llm, sampling_params, prompts_per_question):
 
     solutions_per_question = [[] for _ in num_prompts_per_question]
     global_idx = 0
+    num_gen_tokens = 0
     for i, num in enumerate(num_prompts_per_question):
         for j in range(num):
             solutions_per_question[i].append(llm_outputs[global_idx].outputs[0].text)
+            num_gen_tokens += len(llm_outputs[global_idx].outputs[0].token_ids)
             global_idx += 1
 
-    return solutions_per_question
+    return solutions_per_question, num_gen_tokens
 
 
 def eval(answer, solutions):
@@ -212,6 +216,7 @@ def main(args):
     # Inference
     start_time = time.time()
     ## Sample thinking
+    total_num_gen_tokens = 0
     finished_prompt_thinkings = [[] for _ in samples]
     continued_prompt_thinkings = [[sample["prompt"]] for sample in samples]
     for step in range(args.num_diverged_steps):
@@ -237,10 +242,11 @@ def main(args):
             stop=["</think>"],
         )
 
-        step_finished_prompt_thinkings, continued_prompt_thinkings = single_step_generation(
+        step_finished_prompt_thinkings, continued_prompt_thinkings, step_num_gen_tokens = single_step_generation(
             llm, step_sampling_params, continued_prompt_thinkings, final_step=(step==args.num_diverged_steps-1)
         )
 
+        total_num_gen_tokens += step_num_gen_tokens
         for i, step_finished_prompt_thinking in enumerate(step_finished_prompt_thinkings):
             finished_prompt_thinkings[i] += step_finished_prompt_thinking  
 
@@ -255,7 +261,7 @@ def main(args):
         skip_special_tokens=False,
         seed=args.seed,
     )
-    solutions = solution_generation(llm, solution_sampling_params, finished_prompt_thinkings)
+    solutions, solution_num_gen_tokens = solution_generation(llm, solution_sampling_params, finished_prompt_thinkings)
     assert len(samples) == len(solutions) == len(finished_prompt_thinkings)
     end_time = time.time()
 
@@ -280,6 +286,8 @@ def main(args):
         "num_samples": len(samples),
         "acc": acc,
         "maj_acc": maj_acc,
+        "num_thinking_tokens": total_num_gen_tokens,
+        "num_solution_tokens": solution_num_gen_tokens,
         "time_use_in_min": (end_time - start_time) / 60,
     }
     print(result_json)
