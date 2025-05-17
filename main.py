@@ -282,6 +282,7 @@ def main(args):
         "maj_acc": maj_acc,
         "time_use_in_min": (end_time - start_time) / 60,
     }
+    print(result_json)
 
     # Save
     print(f"Saving {args.data_name} to {out_file_prefix}.json")
