@@ -51,65 +51,6 @@ def prepare_prompt(question, tokenizer, data_name):
     return prompt
 
 
-def single_step_generation(llm, sampling_params, prompts_per_question, final_step=False):
-    num_prompts_per_question = [len(prompts) for prompts in prompts_per_question]
-    flattened_prompts = [prompt for prompts in prompts_per_question for prompt in prompts]
-    
-    finished_prompt_thinkings = [[] for _ in num_prompts_per_question]
-    continued_prompt_thinkings = [[] for _ in num_prompts_per_question]
-    num_gen_tokens = 0
-    
-    if len(flattened_prompts) == 0:
-        return finished_prompt_thinkings, continued_prompt_thinkings, num_gen_tokens, True        
-
-    llm_outputs = llm.generate(
-        flattened_prompts,
-        sampling_params
-    )
-    llm_outputs = sorted(llm_outputs, key=lambda x: int(x.request_id))
-    assert sum(num_prompts_per_question) == len(llm_outputs)
-
-    global_idx = 0
-    for i, num in enumerate(num_prompts_per_question):
-        for j in range(num):
-            for o in llm_outputs[global_idx].outputs:
-                num_gen_tokens += len(o.token_ids)
-                if final_step:
-                    finished_prompt_thinkings[i].append(llm_outputs[global_idx].prompt + o.text)
-                else:
-                    if o.finish_reason == "length":
-                        continued_prompt_thinkings[i].append(llm_outputs[global_idx].prompt + o.text)
-                    else:
-                        finished_prompt_thinkings[i].append(llm_outputs[global_idx].prompt + o.text)
-
-            global_idx += 1
-
-    return finished_prompt_thinkings, continued_prompt_thinkings, num_gen_tokens, False
-
-
-def solution_generation(llm, sampling_params, prompts_per_question):
-    num_prompts_per_question = [len(prompts) for prompts in prompts_per_question]
-    flattened_prompts = [prompt + "</think>" for prompts in prompts_per_question for prompt in prompts]
-
-    llm_outputs = llm.generate(
-        flattened_prompts,
-        sampling_params
-    )
-    llm_outputs = sorted(llm_outputs, key=lambda x: int(x.request_id))
-    assert sum(num_prompts_per_question) == len(llm_outputs)
-
-    solutions_per_question = [[] for _ in num_prompts_per_question]
-    global_idx = 0
-    num_gen_tokens = 0
-    for i, num in enumerate(num_prompts_per_question):
-        for j in range(num):
-            solutions_per_question[i].append(llm_outputs[global_idx].outputs[0].text)
-            num_gen_tokens += len(llm_outputs[global_idx].outputs[0].token_ids)
-            global_idx += 1
-
-    return solutions_per_question, num_gen_tokens
-
-
 def eval(answer, solutions):
     answer = "$" + str(answer) + "$"
     parsed_ans = parse(answer)
@@ -172,8 +113,7 @@ def main(args):
     if not os.path.exists(output_dir):
         output_dir = f"outputs/{output_dir}"
     out_file_prefix = f"{output_dir}/{args.data_name}/{model_name}_" \
-                  f"num{args.num_test_sample}_step{args.num_diverged_steps}_" \
-                  f"init{args.init_n_sampling}_totalThinkingTokens{args.total_thinking_tokens}_stepTokens{args.max_tokens_per_step}"
+                  f"num{args.num_test_sample}_n{args.n_sampling}_totalTokens{args.max_tokens_per_call}"
     os.makedirs(f"{output_dir}/{args.data_name}", exist_ok=True)
 
     # Load and prepare data
@@ -219,65 +159,41 @@ def main(args):
     
     # Inference
     start_time = time.time()
-    ## Sample thinking
     total_num_gen_tokens = 0
-    finished_prompt_thinkings = [[] for _ in samples]
-    continued_prompt_thinkings = [[sample["prompt"]] for sample in samples]
-    for step in range(args.num_diverged_steps):
-        print(f"Sampling thinking for step {step} ...")
-        if step == args.num_diverged_steps - 1:
-            max_tokens = args.total_thinking_tokens - step * args.max_tokens_per_step
-        else:
-            max_tokens = args.max_tokens_per_step
-
-        if step == 0:
-            n_sampling = args.init_n_sampling
-        else:
-            n_sampling = 2
-
-        step_sampling_params = SamplingParams(
-            temperature=args.temperature,
-            top_p=args.top_p,
-            min_p=args.min_p,
-            top_k=args.top_k,
-            max_tokens=max_tokens,
-            #min_tokens=2,
-            n=n_sampling,
-            skip_special_tokens=False,
-            seed=args.seed,
-            stop=["</think>"],
-        )
-
-        step_finished_prompt_thinkings, continued_prompt_thinkings, step_num_gen_tokens, stop = single_step_generation(
-            llm, step_sampling_params, continued_prompt_thinkings, final_step=(step==args.num_diverged_steps-1)
-        )
-
-        if stop:
-            break
-
-        total_num_gen_tokens += step_num_gen_tokens
-        for i, step_finished_prompt_thinking in enumerate(step_finished_prompt_thinkings):
-            finished_prompt_thinkings[i] += step_finished_prompt_thinking  
-
-    ## Sample solution
-    print(f"Sampling solution ...")
-    solution_sampling_params = SamplingParams(
+    prompts = [sample["prompt"] for sample in samples]
+    sampling_params = SamplingParams(
         temperature=args.temperature,
         top_p=args.top_p,
         min_p=args.min_p,
         top_k=args.top_k,
-        max_tokens=args.answer_tokens,
+        max_tokens=args.max_tokens_per_call,
         #min_tokens=2,
-        n=1,
+        n=args.n_sampling,
         skip_special_tokens=False,
         seed=args.seed,
     )
-    solutions, solution_num_gen_tokens = solution_generation(llm, solution_sampling_params, finished_prompt_thinkings)
-    assert len(samples) == len(solutions) == len(finished_prompt_thinkings)
+    llm_outputs = llm.generate(
+        prompts,
+        sampling_params
+    )
+    llm_outputs = sorted(llm_outputs, key=lambda x: int(x.request_id))
+    assert sum(samples) == len(llm_outputs)
     end_time = time.time()
 
     # Eval
-    for sample, thinkings_per_question, solutions_per_question in zip(samples, finished_prompt_thinkings, solutions):
+    total_num_gen_tokens = 0
+    for sample, llm_output in zip(samples, llm_outputs):
+        total_num_gen_tokens += sum([len(o.token_ids) for o in llm_output])
+
+        responses_per_question = [o.text for o in llm_output]
+        solutions_per_question = []
+        for response in responses_per_question:
+            if "</think>" in response:
+                solutions_per_question.append(response.split("</think>")[-1])
+            else:
+                solutions_per_question.append(response)
+
+
         preds, scores = eval(sample["answer"], solutions_per_question)
         maj_pred, maj_score = majority_voting(preds, scores)
         sample.update({
@@ -286,8 +202,7 @@ def main(args):
             "prediction": preds,
             "score": scores,
             "acc": float(np.mean(scores)),
-            "prompt_and_thinking": thinkings_per_question,
-            "solution": solutions_per_question,
+            "response": responses_per_question,
         })
 
     acc = np.mean([sample["acc"] for sample in samples])
@@ -297,8 +212,7 @@ def main(args):
         "num_samples": len(samples),
         "acc": acc,
         "maj_acc": maj_acc,
-        "num_thinking_tokens": total_num_gen_tokens,
-        "num_solution_tokens": solution_num_gen_tokens,
+        "num_total_tokens": total_num_gen_tokens,
         "time_use_in_min": (end_time - start_time) / 60,
     }
     print(result_json)
@@ -328,11 +242,8 @@ def parse_args():
     parser.add_argument("--top_p", default=1, type=float)
     parser.add_argument("--min_p", default=0., type=float)
     parser.add_argument("--top_k", default=-1, type=int)
-    parser.add_argument("--total_thinking_tokens", default=16384, type=int)
-    parser.add_argument("--max_tokens_per_step", default=2048, type=int)
-    parser.add_argument("--answer_tokens", default=3072, type=int)
-    parser.add_argument("--num_diverged_steps", default=7, type=int)
-    parser.add_argument("--init_n_sampling", default=4, type=int)
+    parser.add_argument("--max_tokens_per_call", default=32768, type=int)
+    parser.add_argument("--n_sampling", default=4, type=int)
 
     # Save
     parser.add_argument("--output_dir", default="./output", type=str)
