@@ -120,7 +120,7 @@ def main(args):
     if "math500_level" in args.data_name:
         level = int(args.data_name.strip()[-1])
         examples = load_data("math500", args.data_dir)
-        examples = [example for example in examples if sample["level"]==level]
+        examples = [example for example in examples if example["level"]==level]
     else:
         examples = load_data(args.data_name, args.data_dir)
 
