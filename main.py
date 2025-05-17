@@ -175,6 +175,9 @@ def main(args):
         examples = [example for example in examples if sample["level"]==level]
     else:
         examples = load_data(args.data_name, args.data_dir)
+        
+    if args.num_test_sample != -1:
+        examples = examples[:args.num_test_sample]
 
     print("=" * 50)
     print(f"{args.data_name} || #samples: {len(examples)}")
