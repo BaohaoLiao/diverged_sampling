@@ -165,7 +165,7 @@ def main(args):
         output_dir = f"outputs/{output_dir}"
     out_file_prefix = f"{output_dir}/{args.data_name}/{model_name}_" \
                   f"num{args.num_test_sample}_step{args.num_diverged_steps}_" \
-                  f"totalThinkingTokens{args.total_thinking_tokens}_stepTokens{args.max_tokens_per_step}"
+                  f"init{args.init_n_sampling}_totalThinkingTokens{args.total_thinking_tokens}_stepTokens{args.max_tokens_per_step}"
     os.makedirs(f"{output_dir}/{args.data_name}", exist_ok=True)
 
     # Load and prepare data
