@@ -174,7 +174,7 @@ def main(args):
         examples = load_data("math500", args.data_dir)
         examples = [example for example in examples if sample["level"]==level]
     else:
-        example = load_data(args.data_name, args.data_dir)
+        examples = load_data(args.data_name, args.data_dir)
 
     print("=" * 50)
     print(f"{args.data_name} || #samples: {len(examples)}")
