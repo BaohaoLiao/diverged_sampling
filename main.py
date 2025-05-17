@@ -120,7 +120,7 @@ def eval(answer, solutions):
         )
         scores.append(verify(parsed_ans, parsed_pred))
         if parsed_pred:
-            parsed_preds.append(parsed_pred)
+            parsed_preds.append(str(parsed_pred[0]))
         else:
             parsed_preds.append(None)
     return parsed_preds, scores
