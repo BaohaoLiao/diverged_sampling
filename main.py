@@ -54,6 +54,13 @@ def prepare_prompt(question, tokenizer, data_name):
 def single_step_generation(llm, sampling_params, prompts_per_question, final_step=False):
     num_prompts_per_question = [len(prompts) for prompts in prompts_per_question]
     flattened_prompts = [prompt for prompts in prompts_per_question for prompt in prompts]
+    
+    finished_prompt_thinkings = [[] for _ in num_prompts_per_question]
+    continued_prompt_thinkings = [[] for _ in num_prompts_per_question]
+    num_gen_tokens = 0
+    
+    if len(flattened_prompts) == 0:
+        return finished_prompt_thinkings, continued_prompt_thinkings, num_gen_tokens, True        
 
     llm_outputs = llm.generate(
         flattened_prompts,
@@ -62,10 +69,7 @@ def single_step_generation(llm, sampling_params, prompts_per_question, final_ste
     llm_outputs = sorted(llm_outputs, key=lambda x: int(x.request_id))
     assert sum(num_prompts_per_question) == len(llm_outputs)
 
-    finished_prompt_thinkings = [[] for _ in num_prompts_per_question]
-    continued_prompt_thinkings = [[] for _ in num_prompts_per_question]
     global_idx = 0
-    num_gen_tokens = 0
     for i, num in enumerate(num_prompts_per_question):
         for j in range(num):
             for o in llm_outputs[global_idx].outputs:
@@ -80,7 +84,7 @@ def single_step_generation(llm, sampling_params, prompts_per_question, final_ste
 
             global_idx += 1
 
-    return finished_prompt_thinkings, continued_prompt_thinkings, num_gen_tokens
+    return finished_prompt_thinkings, continued_prompt_thinkings, num_gen_tokens, False
 
 
 def solution_generation(llm, sampling_params, prompts_per_question):
@@ -220,6 +224,7 @@ def main(args):
     finished_prompt_thinkings = [[] for _ in samples]
     continued_prompt_thinkings = [[sample["prompt"]] for sample in samples]
     for step in range(args.num_diverged_steps):
+        print(f"Sampling thinking for step {step} ...")
         if step == args.num_diverged_steps - 1:
             max_tokens = args.total_thinking_tokens - step * args.max_tokens_per_step
         else:
@@ -242,15 +247,19 @@ def main(args):
             stop=["</think>"],
         )
 
-        step_finished_prompt_thinkings, continued_prompt_thinkings, step_num_gen_tokens = single_step_generation(
+        step_finished_prompt_thinkings, continued_prompt_thinkings, step_num_gen_tokens, stop = single_step_generation(
             llm, step_sampling_params, continued_prompt_thinkings, final_step=(step==args.num_diverged_steps-1)
         )
+
+        if stop:
+            break
 
         total_num_gen_tokens += step_num_gen_tokens
         for i, step_finished_prompt_thinking in enumerate(step_finished_prompt_thinkings):
             finished_prompt_thinkings[i] += step_finished_prompt_thinking  
 
     ## Sample solution
+    print(f"Sampling solution ...")
     solution_sampling_params = SamplingParams(
         temperature=args.temperature,
         top_p=args.top_p,
