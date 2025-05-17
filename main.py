@@ -213,13 +213,18 @@ def main(args):
         else:
             max_tokens = args.max_tokens_per_step
 
+        if step == 0:
+            n_sampling = args.init_n_sampling
+        else:
+            n_sampling = 2
+
         step_sampling_params = SamplingParams(
             temperature=args.temperature,
             top_p=args.top_p,
             min_p=args.min_p,
             max_tokens=max_tokens,
             #min_tokens=2,
-            n=2,
+            n=n_sampling,
             skip_special_tokens=False,
             seed=args.seed,
             stop=["</think>"],
@@ -300,6 +305,7 @@ def parse_args():
     parser.add_argument("--max_tokens_per_step", default=2048, type=int)
     parser.add_argument("--answer_tokens", default=3072, type=int)
     parser.add_argument("--num_diverged_steps", default=7, type=int)
+    parser.add_argument("--init_n_sampling", default=4, type=int)
 
     # Save
     parser.add_argument("--output_dir", default="./output", type=str)
