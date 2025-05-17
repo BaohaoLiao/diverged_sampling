@@ -62,8 +62,8 @@ def single_step_generation(llm, sampling_params, prompts_per_question, final_ste
     llm_outputs = sorted(llm_outputs, key=lambda x: int(x.request_id))
     assert sum(num_prompts_per_question) == len(llm_outputs)
 
-    finished_prompt_thinkings = [[] for _ in len(num_prompts_per_question)]
-    continued_prompt_thinkings = [[] for _ in len(num_prompts_per_question)]
+    finished_prompt_thinkings = [[] for _ in num_prompts_per_question]
+    continued_prompt_thinkings = [[] for _ in num_prompts_per_question]
     global_idx = 0
     for i, num in enumerate(num_prompts_per_question):
         for j in range(num):
@@ -92,7 +92,7 @@ def solution_generation(llm, sampling_params, prompts_per_question):
     llm_outputs = sorted(llm_outputs, key=lambda x: int(x.request_id))
     assert sum(num_prompts_per_question) == len(llm_outputs)
 
-    solutions_per_question = [[] for _ in len(num_prompts_per_question)]
+    solutions_per_question = [[] for _ in num_prompts_per_question]
     global_idx = 0
     for i, num in enumerate(num_prompts_per_question):
         for j in range(num):
@@ -212,7 +212,7 @@ def main(args):
     # Inference
     start_time = time.time()
     ## Sample thinking
-    finished_prompt_thinkings = [[] for _ in len(samples)]
+    finished_prompt_thinkings = [[] for _ in samples]
     continued_prompt_thinkings = [[sample["prompt"]] for sample in samples]
     for step in range(args.num_diverged_steps):
         if step == args.num_diverged_steps - 1:
