@@ -194,7 +194,7 @@ def main(args):
     samples = []
     for i, example in enumerate(examples):
         question = parse_question(example, args.data_name)
-        prompt = prepare_prompt(example["question"], tokenizer, args.data_name)
+        prompt = prepare_prompt(question, tokenizer, args.data_name)
         samples.append({
             "idx": example["idx"],
             "question": question,
