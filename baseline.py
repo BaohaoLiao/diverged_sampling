@@ -184,7 +184,7 @@ def main(args):
     for sample, llm_output in zip(samples, llm_outputs):
         total_num_gen_tokens += sum([len(o.token_ids) for o in llm_output.outputs])
 
-        responses_per_question = [o.text for o in llm_output]
+        responses_per_question = [o.text for o in llm_output.outputs]
         solutions_per_question = []
         for response in responses_per_question:
             if "</think>" in response:
