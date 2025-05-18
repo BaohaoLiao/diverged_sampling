@@ -177,7 +177,7 @@ def main(args):
         sampling_params
     )
     llm_outputs = sorted(llm_outputs, key=lambda x: int(x.request_id))
-    assert sum(samples) == len(llm_outputs)
+    assert len(samples) == len(llm_outputs)
     end_time = time.time()
 
     # Eval
