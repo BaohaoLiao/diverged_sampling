@@ -159,7 +159,6 @@ def main(args):
     
     # Inference
     start_time = time.time()
-    total_num_gen_tokens = 0
     prompts = [sample["prompt"] for sample in samples]
     sampling_params = SamplingParams(
         temperature=args.temperature,
@@ -183,7 +182,7 @@ def main(args):
     # Eval
     total_num_gen_tokens = 0
     for sample, llm_output in zip(samples, llm_outputs):
-        total_num_gen_tokens += sum([len(o.token_ids) for o in llm_output])
+        total_num_gen_tokens += sum([len(o.token_ids) for o in llm_output.outputs])
 
         responses_per_question = [o.text for o in llm_output]
         solutions_per_question = []
