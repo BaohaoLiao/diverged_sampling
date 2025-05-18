@@ -214,7 +214,7 @@ def main(args):
         max_num_seqs=args.max_num_seqs,
         max_model_len=args.max_model_len,
         seed=args.seed,
-        enable_prefix_caching=True,  # For efficiency
+        enable_prefix_caching=False,  # For efficiency
     )
     
     # Inference
