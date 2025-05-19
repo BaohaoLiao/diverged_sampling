@@ -235,7 +235,7 @@ def main(args):
     # Inference
     start_time = time.time()
     ## Sample thinking
-    total_num_gen_tokens = 0
+    thinking_num_gen_tokens = 0
     finished_prompt_thinkings = [[] for _ in samples]
     continued_prompt_thinkings = [[sample["prompt"]] for sample in samples]
     for step in range(args.num_diverged_steps):
@@ -270,7 +270,7 @@ def main(args):
         if stop:
             break
 
-        total_num_gen_tokens += step_num_gen_tokens
+        thinking_num_gen_tokens += step_num_gen_tokens
         for i, step_finished_prompt_thinking in enumerate(step_finished_prompt_thinkings):
             finished_prompt_thinkings[i] += step_finished_prompt_thinking  
 
@@ -312,9 +312,9 @@ def main(args):
         "num_samples": len(samples),
         "acc": acc,
         "maj_acc": maj_acc,
-        "num_thinking_tokens": total_num_gen_tokens,
+        "num_thinking_tokens": thinking_num_gen_tokens,
         "num_solution_tokens": solution_num_gen_tokens,
-        "num_total_tokens": total_num_gen_tokens + solution_num_gen_tokens,
+        "num_total_tokens": thinking_num_gen_tokens + solution_num_gen_tokens,
         "time_use_in_min": (end_time - start_time) / 60,
     }
     print(result_json)
