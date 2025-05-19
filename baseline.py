@@ -8,7 +8,7 @@ import numpy as np
 import torch
 import transformers
 from vllm import LLM, SamplingParams
-from math_verify import parse, LatexExtractionConfig, verify
+from math_verify import parse, LatexExtractionConfig, StringExtractionConfig, verify
 
 from utils import load_data, parse_question
 
@@ -25,22 +25,23 @@ def set_seed(seed: int = 42) -> None:
     
 
 def prepare_prompt(question, tokenizer, data_name):
-    system_prompt = "Please reason step by step, and put your final answer within \\boxed{}."
-    system_prompt_choice = (
-        "Please reason step by step, and put your final answer within \\boxed{}.\n"
-        "The last line of your response should be of the following format: "
-        "'\\boxed{LETTER}' (without quotes) where LETTER is one of ABCD."
-    )
     if data_name in ["gpqa"]:
+        prefix = (
+            "Answer the following multiple choice question. "
+            "The last line of your response should be of the following format: "
+            "'ANSWER: $LETTER' (without quotes) where LETTER is one of ABCD. "
+            "Think step by step before answering.\n\n"
+        )
         message = [
-            {"role": "system", "content": system_prompt_choice},
-            {"role": "user", "content": "Question: " + question},
+            {"role": "user", "content": prefix + "Question: " + question},
         ]
     else:
+        system_prompt = "Please reason step by step, and put your final answer within \\boxed{}."
         message = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": "Question: " + question},
         ]
+        
     prompt = tokenizer.apply_chat_template(
         message,
         tokenize=False,
@@ -51,22 +52,32 @@ def prepare_prompt(question, tokenizer, data_name):
     return prompt
 
 
-def eval(answer, solutions):
-    answer = "$" + str(answer) + "$"
+def eval(answer, solutions, data_name):
+    if data_name in ["gpqa"]:
+        abcd = "ABCD"
+        answer = "$" + abcd[answer] + "$"
+    else:
+        answer = "$" + str(answer) + "$"
     parsed_ans = parse(answer)
 
     parsed_preds = []
     scores = []
     for solution in solutions:
-        parsed_pred = parse(
-            solution, 
-            extraction_config=[
-                LatexExtractionConfig(
-                    boxed_match_priority=0, 
-                    try_extract_without_anchor=True,
-                ),
-            ]
-        )
+        if data_name in ["gpqa"]:
+            parsed_pred = parse(
+                solution,
+                extraction_config=[StringExtractionConfig(lowercase=False)],
+            )
+        else:
+            parsed_pred = parse(
+                solution, 
+                extraction_config=[
+                    LatexExtractionConfig(
+                        boxed_match_priority=0, 
+                        try_extract_without_anchor=True,
+                    ),
+                ]
+            )
         scores.append(verify(parsed_ans, parsed_pred))
         if parsed_pred:
             parsed_preds.append(str(parsed_pred[0]))
@@ -193,7 +204,7 @@ def main(args):
                 solutions_per_question.append(response)
 
 
-        preds, scores = eval(sample["answer"], solutions_per_question)
+        preds, scores = eval(sample["answer"], solutions_per_question, args.data_name)
         maj_pred, maj_score = majority_voting(preds, scores)
         sample.update({
             "maj_pred": maj_pred,
