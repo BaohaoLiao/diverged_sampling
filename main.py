@@ -314,6 +314,7 @@ def main(args):
         "maj_acc": maj_acc,
         "num_thinking_tokens": total_num_gen_tokens,
         "num_solution_tokens": solution_num_gen_tokens,
+        "num_total_tokens": total_num_gen_tokens + solution_num_gen_tokens,
         "time_use_in_min": (end_time - start_time) / 60,
     }
     print(result_json)
