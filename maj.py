@@ -29,7 +29,7 @@ def main(args):
                 maj_scores.append(maj_score)
             avg_maj_scores.append(np.mean(maj_scores))
 
-        results[f"maj@{k}": np.mean(avg_maj_scores)]
+        results[f"maj@{k}"] = np.mean(avg_maj_scores)
 
     print(results)
             
