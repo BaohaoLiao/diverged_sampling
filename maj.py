@@ -32,7 +32,7 @@ def main(args):
         results[f"maj@{k}"] = np.mean(avg_maj_scores)
 
     for k, v in results.items():
-        print(k, ":", value)
+        print(k, ":", v)
             
 
 def parse_args():
