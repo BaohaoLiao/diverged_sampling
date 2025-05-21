@@ -21,6 +21,7 @@ def main(args):
         avg_maj_scores = []
         for _ in range(50): # Sample 50 times
             inds = random.sample(range(n), k)
+            inds.sort()
             maj_scores = []
             for sample in samples:
                 preds = [sample["prediction"][i] for i in inds]
