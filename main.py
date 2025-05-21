@@ -1,11 +1,9 @@
 import os
 import json
 import time
-import random
 import argparse
 import numpy as np
 
-import torch
 import transformers
 from vllm import LLM, SamplingParams
 
